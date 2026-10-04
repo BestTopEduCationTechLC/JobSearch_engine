@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BESTTOP CAREER INTERLLIGENCE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Doppio+One&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <nav class="topnav" id="topnav"></nav>
+
+  <div class="wrap">
+    <h1 id="pageTitle">Personal Interface<span class="count-badge" id="countBadge">0</span></h1>
+    <p class="sub">Jobs you've saved from the search page, stored on your account.</p>
+    <p class="hint" id="authHint" style="display:none;">Sign in (top right) to see your saved jobs.</p>
+
+    <div class="card" id="accountCard" style="display:none;">
+      <h2 style="margin-top:0;">Account</h2>
+      <p class="hint" style="margin-top:0;">
+        You sign in with your username + password. This is the confirmed email on file for
+        your account — change it below if needed; Supabase will email a confirmation link to
+        the new address before it takes effect.
+      </p>
+      <p id="emailStatus" class="hint" style="margin:0 0 10px;"></p>
+      <div class="field-row" style="margin-bottom: 10px;">
+        <div class="field">
+          <label for="contactEmailInput">Email address</label>
+          <input type="text" id="contactEmailInput" placeholder="you@example.com" />
+        </div>
+      </div>
+      <button type="button" id="saveEmailBtn">Update &amp; send confirmation link</button>
+      <p class="hint" id="emailSaveMsg" style="display:none;"></p>
+    </div>
+
+    <div class="card" id="historyCard" style="display:none;">
+      <h2 style="margin-top:0;">Your search history</h2>
+      <div id="historyList"></div>
+    </div>
+
+    <div class="toolbar">
+      <label class="checkline"><input type="checkbox" id="selectAll" /> Select all</label>
+      <span id="selectedCount" class="hint" style="margin: 0;">0 selected</span>
+      <span class="spacer"></span>
+      <button type="button" id="exportSelectedBtn" disabled>Export selected to PDF</button>
+      <button type="button" id="exportAllBtn" disabled>Export all to PDF</button>
+      <button type="button" class="danger" id="removeSelectedBtn" disabled>Remove selected</button>
+    </div>
+
+    <div id="results"></div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="assets/app.js"></script>
+<script>
+(async function () {
+  const App = window.JobSpyApp;
+  const user = await App.renderNav("personal");
+  const name = user ? user.username : "Guest";
+  document.title = `${name} Job History `;
+  document.getElementById("pageTitle").innerHTML =
+    `${App.escapeHtml(name)} Job History <span class="count-badge" id="countBadge">0</span>`;
+
+  const state = { jobs: [], selected: new Set() };
+  const resultsEl = document.getElementById("results");
+  const countBadge = document.getElementById("countBadge");
+  const selectAll = document.getElementById("selectAll");
+  const selectedCount = document.getElementById("selectedCount");
+  const exportSelectedBtn = document.getElementById("exportSelectedBtn");
+  const exportAllBtn = document.getElementById("exportAllBtn");
+  const removeSelectedBtn = document.getElementById("removeSelectedBtn");
+
+  if (!user) {
+    document.getElementById("authHint").style.display = "block";
+    resultsEl.innerHTML = `<div class="empty">Sign in to view your saved jobs.</div>`;
+    return;
+  }
+
+  document.getElementById("accountCard").style.display = "block";
+  document.getElementById("historyCard").style.display = "block";
+
+  // ---- Account: confirmed email on file (required at signup, changeable here) ----
+  const emailStatusEl = document.getElementById("emailStatus");
+  const contactEmailInput = document.getElementById("contactEmailInput");
+  const saveEmailBtn = document.getElementById("saveEmailBtn");
+  const emailSaveMsg = document.getElementById("emailSaveMsg");
+
+  async function refreshEmailStatus() {
+    try {
+      const status = await App.getEmailStatus();
+      if (status.current) {
+        emailStatusEl.textContent = `Confirmed email: ${status.current}`;
+        contactEmailInput.value = status.current;
+      } else if (status.pending) {
+        emailStatusEl.textContent = `Confirmation link sent to ${status.pending} — check your inbox.`;
+        contactEmailInput.value = status.pending;
+      } else {
+        emailStatusEl.textContent = "No email on file yet.";
+      }
+    } catch (err) {
+      emailStatusEl.textContent = "";
+      console.error(err);
+    }
+  }
+
+  saveEmailBtn.addEventListener("click", async () => {
+    const email = contactEmailInput.value.trim();
+    if (!email) return;
+    saveEmailBtn.disabled = true;
+    emailSaveMsg.style.display = "none";
+    try {
+      await App.updateContactEmail(email);
+      emailSaveMsg.textContent = `Confirmation link sent to ${email} — click it to confirm.`;
+      emailSaveMsg.style.display = "block";
+      await refreshEmailStatus();
+    } catch (err) {
+      emailSaveMsg.textContent = `Could not update email: ${err.message}`;
+      emailSaveMsg.style.display = "block";
+    } finally {
+      saveEmailBtn.disabled = false;
+    }
+  });
+
+  refreshEmailStatus();
+
+  // ---- Search history: past private runs, each with its own results ----
+  const historyListEl = document.getElementById("historyList");
+
+  function renderHistory(runs) {
+    if (runs.length === 0) {
+      historyListEl.innerHTML = '<p class="hint" style="margin:0;">No searches yet. Go to <a href="index.html">Search</a> and run one.</p>';
+      return;
+    }
+    historyListEl.innerHTML = runs.map((run) => {
+      const when = new Date(run.created_at).toLocaleString();
+      const statusLabel = { pending: "queued", running: "running", completed: "completed", failed: "failed" }[run.status] || run.status;
+      return `
+        <div class="job">
+          <div class="body">
+            <h3>${App.escapeHtml(run.search_term || "(no term)")} <span class="tag">${statusLabel}</span></h3>
+            <div class="company">${App.escapeHtml(run.location || "")} &middot; ${when}</div>
+            ${run.error ? `<div class="hint" style="color: var(--danger); margin:4px 0 0;">${App.escapeHtml(run.error)}</div>` : ""}
+          </div>
+          ${run.status === "completed" ? `<button type="button" class="viewRun" data-id="${App.escapeHtml(run.id)}">View results</button>` : ""}
+        </div>`;
+    }).join("");
+    historyListEl.querySelectorAll(".viewRun").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        try {
+          const results = await App.getSearchResults(btn.dataset.id);
+          state.jobs = results;
+          state.selected.clear();
+          render();
+          resultsEl.scrollIntoView({ behavior: "smooth" });
+        } catch (err) {
+          alert(`Could not load results: ${err.message}`);
+        }
+      });
+    });
+  }
+
+  App.listSearchRuns().then(renderHistory).catch((err) => console.error(err));
+
+  function render() {
+    const list = state.jobs;
+    countBadge.textContent = list.length;
+    exportAllBtn.disabled = list.length === 0;
+
+    if (list.length === 0) {
+      resultsEl.innerHTML = '<div class="empty">No saved jobs yet. Go to <a href="index.html">Search</a> and save some.</div>';
+    } else {
+      resultsEl.innerHTML = list.map((job) => `
+        <div class="job">
+          <input type="checkbox" class="jobCheck" data-id="${App.escapeHtml(job.id)}" ${state.selected.has(job.id) ? "checked" : ""} />
+          <div class="body">
+            <h3><a href="${App.escapeHtml(job.job_url)}" target="_blank" rel="noopener">${App.escapeHtml(job.title)}</a></h3>
+            <div class="company">${App.escapeHtml(job.company)} &middot; ${App.escapeHtml(job.location)}</div>
+            <div class="tags">
+              ${job.site ? `<span class="tag">${App.escapeHtml(job.site)}</span>` : ""}
+              ${job.job_type ? `<span class="tag">${App.escapeHtml(job.job_type)}</span>` : ""}
+              ${job.date_posted ? `<span class="tag">${App.escapeHtml(job.date_posted)}</span>` : ""}
+            </div>
+          </div>
+          <button type="button" class="danger remove" data-id="${App.escapeHtml(job.id)}">Remove</button>
+        </div>
+      `).join("");
+      resultsEl.querySelectorAll(".jobCheck").forEach((cb) => {
+        cb.addEventListener("change", () => {
+          if (cb.checked) state.selected.add(cb.dataset.id);
+          else state.selected.delete(cb.dataset.id);
+          updateSelectionUi();
+        });
+      });
+      resultsEl.querySelectorAll(".remove").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          await App.removeSavedJob(btn.dataset.id);
+          state.jobs = state.jobs.filter((j) => j.id !== btn.dataset.id);
+          state.selected.delete(btn.dataset.id);
+          render();
+        });
+      });
+    }
+    updateSelectionUi();
+  }
+
+  function updateSelectionUi() {
+    const n = state.selected.size;
+    selectedCount.textContent = `${n} selected`;
+    exportSelectedBtn.disabled = n === 0;
+    removeSelectedBtn.disabled = n === 0;
+    const ids = state.jobs.map((j) => j.id);
+    selectAll.checked = ids.length > 0 && ids.every((id) => state.selected.has(id));
+  }
+
+  selectAll.addEventListener("change", () => {
+    const ids = state.jobs.map((j) => j.id);
+    if (selectAll.checked) ids.forEach((id) => state.selected.add(id));
+    else state.selected.clear();
+    render();
+  });
+
+  function selectedJobObjects() {
+    return state.jobs.filter((j) => state.selected.has(j.id));
+  }
+
+  exportSelectedBtn.addEventListener("click", () => {
+    const includeDescription = confirm("Include full job descriptions in the PDF? Click OK for yes, Cancel for no.");
+    App.exportJobsToPdf(selectedJobObjects(), { includeDescription });
+  });
+
+  exportAllBtn.addEventListener("click", () => {
+    const includeDescription = confirm("Include full job descriptions in the PDF? Click OK for yes, Cancel for no.");
+    App.exportJobsToPdf(state.jobs, { includeDescription });
+  });
+
+  removeSelectedBtn.addEventListener("click", async () => {
+    const ids = Array.from(state.selected);
+    await Promise.all(ids.map((id) => App.removeSavedJob(id)));
+    state.jobs = state.jobs.filter((j) => !state.selected.has(j.id));
+    state.selected.clear();
+    render();
+  });
+
+  try {
+    state.jobs = await App.getSavedJobs();
+  } catch (err) {
+    console.error(err);
+  }
+  render();
+})();
+</script>
+</body>
+</html>

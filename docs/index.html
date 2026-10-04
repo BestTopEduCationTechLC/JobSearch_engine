@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Besttop Job Engine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Doppio+One&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <nav class="topnav" id="topnav"></nav>
+
+  <div class="wrap">
+    <h1>Job Search Engine <span class="count-badge" id="countBadge">0</span></h1>
+    <p class="sub" id="metaLine">Loading job data&hellip;</p>
+
+    <div class="field" style="margin-bottom: 6px;">
+      <label for="searchInput">Search [supports AND, OR, NOT, "exact phrases", and (grouping)]</label>
+      <input type="text" id="searchInput" placeholder='e.g. "data analyst" AND (python OR sql) NOT intern' autofocus />
+    </div>
+    <p class="hint">
+      Please enter your request in this search bar&#8593; with the appropiate syntax.
+    </p>
+
+    <details class="advanced">
+      <summary>Advanced parameters (used only when you click "Run New Search")</summary>
+      <div class="field-row">
+        <div class="field">
+          <label for="jobTypeInput">Job type</label>
+          <select id="jobTypeInput">
+            <option value="">Any</option>
+            <option value="fulltime">Full-time</option>
+            <option value="parttime">Part-time</option>
+            <option value="internship">Internship</option>
+            <option value="contract">Contract</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="resultsInput">Results per site</label>
+          <input type="number" id="resultsInput" min="1" max="1000" value="100" />
+        </div>
+        <div class="field">
+          <label for="hoursOldInput">Posted within (hours)</label>
+          <input type="number" id="hoursOldInput" min="1" value="168" />
+        </div>
+      </div>
+      <div class="field-row" style="margin-bottom: 6px;">
+        <label class="checkline"><input type="checkbox" id="siteIndeed" checked /> Indeed</label>
+        <label class="checkline"><input type="checkbox" id="siteLinkedin" checked /> LinkedIn</label>
+        <label class="checkline"><input type="checkbox" id="siteGoogle" checked /> Google</label>
+        <label class="checkline"><input type="checkbox" id="siteZip" /> ZipRecruiter</label>
+        <label class="checkline"><input type="checkbox" id="siteGlassdoor" /> Glassdoor</label>
+        <label class="checkline"><input type="checkbox" id="siteBayt" /> Bayt</label>
+      </div>
+      <div class="field-row">
+        <label class="checkline"><input type="checkbox" id="remoteInput" /> Remote only</label>
+        <label class="checkline"><input type="checkbox" id="easyApplyInput" /> Easy-apply only</label>
+      </div>
+      <p class="hint" style="margin-top: 0;">
+        Note (Indeed's own limits): Indeed and LinkedIn each honor only one of
+        "posted within" / "job type &amp; remote" / "easy-apply" at a time.
+      </p>
+    </details>
+
+    <div class="toolbar">
+      <button type="button" class="primary" id="runSearchBtn">Run New Search </button>
+      <span class="spacer"></span>
+      <button type="button" id="backToAllBtn" style="display:none;">&larr; Back to all jobs</button>
+    </div>
+    <p class="hint" id="authHint" style="display:none;">Sign in (top right) to run a new search or save jobs.</p>
+    <p class="hint" id="runStatus" style="display:none;"></p>
+    <div class="scrapeProgress" id="scrapeProgress" style="display:none;">
+      <div class="scrapeProgress-bar"></div>
+    </div>
+
+    <div class="toolbar">
+      <label class="checkline"><input type="checkbox" id="selectAll" /> Select all shown</label>
+      <span id="selectedCount" class="hint" style="margin: 0;">0 selected</span>
+      <span class="spacer"></span>
+      <button type="button" id="saveSelectedBtn" disabled>Save selected</button>
+      <button type="button" id="exportSelectedBtn" disabled>Export selected to PDF</button>
+    </div>
+
+    <div id="results"></div>
+    <footer>
+      <p>This search engine is powered by <a href="https://github.com/speedyapply/JobSpy"> JobSpy by Cullen Watson</a> For our legal disclaimer of our data policy, please look into our contact page on the top right hand side</p>
+    </footer>
+
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="assets/app.js"></script>
+<script>
+(async function () {
+  const App = window.JobSpyApp;
+  const currentUser = await App.renderNav("index");
+  if (!currentUser) document.getElementById("authHint").style.display = "block";
+
+  // state.jobs is whatever's currently on screen — either the shared,
+  // publicly-browsable dataset, or one user's own private search results.
+  const state = { jobs: [], sharedJobs: [], selected: new Set(), viewingPrivate: false, stopPolling: null };
+
+  const resultsEl = document.getElementById("results");
+  const searchInput = document.getElementById("searchInput");
+  const metaLine = document.getElementById("metaLine");
+  const countBadge = document.getElementById("countBadge");
+  const selectAll = document.getElementById("selectAll");
+  const selectedCount = document.getElementById("selectedCount");
+  const saveSelectedBtn = document.getElementById("saveSelectedBtn");
+  const exportSelectedBtn = document.getElementById("exportSelectedBtn");
+  const runStatusEl = document.getElementById("runStatus");
+  const backToAllBtn = document.getElementById("backToAllBtn");
+  const scrapeProgressEl = document.getElementById("scrapeProgress");
+
+  function showRunStatus(text) {
+    runStatusEl.textContent = text;
+    runStatusEl.style.display = text ? "block" : "none";
+  }
+
+  // Progress bar reassuring the user their scrape is running — shown for
+  // the whole pending/running window, hidden once it settles either way.
+  function showScrapeProgress(isRunning) {
+    scrapeProgressEl.style.display = isRunning ? "block" : "none";
+  }
+
+  backToAllBtn.addEventListener("click", () => {
+    if (state.stopPolling) { state.stopPolling(); state.stopPolling = null; }
+    state.viewingPrivate = false;
+    state.jobs = state.sharedJobs;
+    backToAllBtn.style.display = "none";
+    showRunStatus("");
+    showScrapeProgress(false);
+    metaLine.textContent = state.sharedMetaLine || "";
+    render();
+  });
+
+  let visibleJobs = [];
+
+  function jobFields(job) {
+    return [job.title, job.company, job.location, job.description].filter(Boolean).join(" ");
+  }
+
+  function render() {
+    const predicate = App.buildPredicate(searchInput.value, jobFields);
+    visibleJobs = state.jobs.filter(predicate);
+    countBadge.textContent = visibleJobs.length;
+
+    if (visibleJobs.length === 0) {
+      resultsEl.innerHTML = '<div class="empty">No jobs match your search.</div>';
+    } else {
+      resultsEl.innerHTML = visibleJobs.slice(0, 300).map((job) => `
+        <div class="job">
+          <input type="checkbox" class="jobCheck" data-id="${App.escapeHtml(job.id)}" ${state.selected.has(job.id) ? "checked" : ""} />
+          <div class="body">
+            <h3><a href="${App.escapeHtml(job.job_url)}" target="_blank" rel="noopener">${App.escapeHtml(job.title)}</a></h3>
+            <div class="company">${App.escapeHtml(job.company)} &middot; ${App.escapeHtml(job.location)}</div>
+            <div class="tags">
+              ${job.site ? `<span class="tag">${App.escapeHtml(job.site)}</span>` : ""}
+              ${job.job_type ? `<span class="tag">${App.escapeHtml(job.job_type)}</span>` : ""}
+              ${job.date_posted ? `<span class="tag">${App.escapeHtml(job.date_posted)}</span>` : ""}
+            </div>
+          </div>
+        </div>
+      `).join("");
+      resultsEl.querySelectorAll(".jobCheck").forEach((cb) => {
+        cb.addEventListener("change", () => {
+          if (cb.checked) state.selected.add(cb.dataset.id);
+          else state.selected.delete(cb.dataset.id);
+          updateSelectionUi();
+        });
+      });
+    }
+    updateSelectionUi();
+  }
+
+  function updateSelectionUi() {
+    const n = state.selected.size;
+    selectedCount.textContent = `${n} selected`;
+    saveSelectedBtn.disabled = n === 0;
+    exportSelectedBtn.disabled = n === 0;
+    const visibleIds = visibleJobs.map((j) => j.id);
+    selectAll.checked = visibleIds.length > 0 && visibleIds.every((id) => state.selected.has(id));
+  }
+
+  function selectedJobObjects() {
+    return state.jobs.filter((j) => state.selected.has(j.id));
+  }
+
+  searchInput.addEventListener("input", render);
+
+  selectAll.addEventListener("change", () => {
+    if (selectAll.checked) visibleJobs.forEach((j) => state.selected.add(j.id));
+    else visibleJobs.forEach((j) => state.selected.delete(j.id));
+    render();
+  });
+
+  saveSelectedBtn.addEventListener("click", async () => {
+    if (!(await App.getUser())) { App.goToLogin(); return; }
+    try {
+      const n = state.selected.size;
+      await App.saveJobs(selectedJobObjects());
+      alert(`Saved ${n} job(s) to your personal page.`);
+    } catch (err) {
+      alert(`Could not save: ${err.message}`);
+    }
+  });
+
+  exportSelectedBtn.addEventListener("click", () => {
+    const includeDescription = confirm("Include full job descriptions in the PDF? Click OK for yes, Cancel for no.");
+    App.exportJobsToPdf(selectedJobObjects(), { includeDescription });
+  });
+
+  document.getElementById("runSearchBtn").addEventListener("click", async () => {
+    if (!(await App.getUser())) { App.goToLogin(); return; }
+    const siteMap = [
+      ["siteIndeed", "indeed"], ["siteLinkedin", "linkedin"], ["siteGoogle", "google"],
+      ["siteZip", "zip_recruiter"], ["siteGlassdoor", "glassdoor"], ["siteBayt", "bayt"],
+    ];
+    const sites = siteMap.filter(([id]) => document.getElementById(id).checked).map(([, name]) => name);
+    if (sites.length === 0) { alert("Select at least one site."); return; }
+
+    const scraperTerm = App.toScraperTerm(searchInput.value) || "jobs";
+    const targetLocation = "Singapore"; // fixed — no location box; see scraper/scrape_defaults.py
+    const inputs = {
+      search_term: scraperTerm,
+      location: targetLocation,
+      site_names: sites.join(","),
+      results_wanted: String(document.getElementById("resultsInput").value || "100"),
+      hours_old: String(document.getElementById("hoursOldInput").value || "168"),
+      job_type: document.getElementById("jobTypeInput").value,
+      is_remote: document.getElementById("remoteInput").checked ? "true" : "false",
+      easy_apply: document.getElementById("easyApplyInput").checked ? "true" : "false",
+      // fixed — no distance box; scraper/scrape_defaults.py resolves a blank
+      // value to the scraper's own maximum radius anyway, this just skips
+      // sending a smaller one from the client.
+    };
+
+    const btn = document.getElementById("runSearchBtn");
+    btn.disabled = true;
+    btn.textContent = "Starting scrape…";
+    try {
+      const run = await App.createSearchRun({
+        searchTerm: scraperTerm,
+        location: targetLocation,
+        params: inputs,
+      });
+      await App.dispatchScrape(inputs, run.id);
+
+      if (state.stopPolling) state.stopPolling();
+      state.viewingPrivate = true;
+      backToAllBtn.style.display = "inline-block";
+      showRunStatus("Your Search is running ———— Go get a coffee in the mean time! ╰(*°▽°*)╯");
+      showScrapeProgress(true);
+      resultsEl.innerHTML = "";
+
+      state.stopPolling = App.pollSearchRun(run.id, async (updatedRun, pollError) => {
+        if (pollError) {
+          showRunStatus(`Search status could not be found (•_•): ${pollError.message}`);
+          showScrapeProgress(false);
+          return;
+        }
+        if (updatedRun.status === "failed") {
+          showRunStatus(`Search failed ( ˘︹˘ ): ${updatedRun.error || "unknown error (>ლ)"}`);
+          showScrapeProgress(false);
+          return;
+        }
+        if (updatedRun.status === "completed") {
+          showRunStatus("");
+          showScrapeProgress(false);
+          try {
+            state.jobs = await App.getSearchResults(run.id);
+          } catch (err) {
+            showRunStatus(`Could not load results ≡(▔﹏▔)≡ : ${err.message}`);
+            return;
+          }
+          metaLine.textContent = `Your private results for "${updatedRun.search_term || ""}" in ${updatedRun.location || ""} — ${state.jobs.length} job(s)`;
+          render();
+        }
+      }, 8000);
+    } catch (err) {
+      console.error(err);
+      showScrapeProgress(false);
+      alert(`Could not start the scrape (￣ i ￣;) : ${err.message}`);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Run New Search";
+    }
+  });
+
+  fetch("data/jobs.json", { cache: "no-store" })
+    .then((r) => r.json())
+    .then((data) => {
+      state.sharedJobs = data.jobs || [];
+      const generated = data.generated_at ? new Date(data.generated_at).toLocaleString() : "unknown";
+      state.sharedMetaLine = `Last scraped: ${generated} — search term: "${data.search_term || ""}" in ${data.location || ""}`;
+      if (!state.viewingPrivate) {
+        state.jobs = state.sharedJobs;
+        metaLine.textContent = state.sharedMetaLine;
+      }
+      render();
+    })
+    .catch((err) => {
+      metaLine.textContent = "Could not load job data. （＞人＜；）";
+      resultsEl.innerHTML = '<div class="empty"> No data available yet. Please try again.</div>';
+      console.error(err);
+    });
+})();
+</script>
+</body>
+</html>

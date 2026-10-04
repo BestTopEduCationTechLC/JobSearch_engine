@@ -1,0 +1,38 @@
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[project]
+name = "python-jobspy"
+version = "1.2.0"
+description = "Job scraper for LinkedIn, Indeed, Glassdoor, Google, ZipRecruiter, Bayt, Naukri & BDJobs"
+authors = [
+    { name = "Cullen Watson", email = "cullen@cullenwatson.com" },
+    { name = "Zachary Hampton", email = "zachary@zacharysproducts.com" },
+]
+maintainers = [
+    { name = "Kirk Watson", email = "kirk@klwindustries.com" },
+]
+readme = "README.md"
+license = "MIT"
+keywords = ["jobs-scraper", "linkedin", "indeed", "glassdoor", "google", "ziprecruiter", "bayt", "naukri", "bdjobs"]
+requires-python = ">=3.10"
+dependencies = [
+    "requests>=2.31.0",
+    "beautifulsoup4>=4.12.2",
+    "pandas>=2.1.2",
+    "pydantic>=2.3.0",
+    "curl_cffi>=0.16.2",
+    "markdownify>=1.1.0",
+]
+dynamic = ["classifiers"]
+
+[project.urls]
+Homepage = "https://github.com/speedyapply/JobSpy"
+Issues = "https://github.com/speedyapply/JobSpy/issues"
+
+[tool.poetry]
+packages = [{ include = "jobspy" }]
+
+[tool.poetry.group.dev.dependencies]
+pre-commit = "*"

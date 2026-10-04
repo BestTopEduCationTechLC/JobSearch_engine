@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sign in</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Doppio+One&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <nav class="topnav" id="topnav"></nav>
+
+  <div class="wrap" style="max-width: 420px;">
+    <h1 id="pageTitle">Sign in</h1>
+
+    <div id="signedInCard" class="card" style="display:none;">
+      <p style="margin:0 0 4px;">You're signed in as <strong id="signedInName"></strong>.</p>
+      <p class="hint" id="redirectHint" style="margin:0 0 14px;"></p>
+      <div class="actions" style="display:flex; gap:10px;">
+        <a id="continueLink" class="primary" style="text-decoration:none;">Continue</a>
+        <button type="button" id="signOutBtn">Sign out</button>
+      </div>
+    </div>
+
+    <div id="authCard" class="card" style="display:none;">
+      <div class="field" style="margin-bottom: 14px;">
+        <label for="authUsername">Username</label>
+        <input type="text" id="authUsername" autocomplete="username" />
+      </div>
+      <div class="field" id="authEmailField" style="display:none; margin-bottom: 14px;">
+        <label for="authEmail">Email address</label>
+        <input type="text" id="authEmail" autocomplete="email" placeholder="you@example.com" />
+      </div>
+      <div class="field" id="authPasswordField" style="margin-bottom: 14px;">
+        <label for="authPassword">Password</label>
+        <input type="password" id="authPassword" autocomplete="current-password" />
+      </div>
+      <ul class="pwRules" id="authPasswordRules" style="display:none;"></ul>
+
+      <p class="hint" id="authForgotWrap" style="margin: 0 0 14px;">
+        <button type="button" id="authForgotBtn">Forgot password?</button>
+      </p>
+
+      <p class="hint" id="authInfo" style="display:none;"></p>
+      <p class="hint" id="authError" style="display:none; color: var(--danger);"></p>
+
+      <button type="button" class="primary" id="authSubmitBtn" style="width:100%; margin-bottom: 10px;">Sign in</button>
+      <button type="button" id="authToggleBtn" style="width:100%;"> Need an account? Sign up </button>
+    </div>
+  </div>
+
+  <div class="legalModal-backdrop" id="legalModalBackdrop" style="display:none;">
+    <div class="legalModal" role="dialog" aria-modal="true" aria-labelledby="legalModalTitle">
+      <h2 id="legalModalTitle" style="margin-top:0;"> Legal Disclaimer </h2>
+      <p class="hint" style="margin:0 0 12px;"> By registering an account you agree that BestTop Consulting Pte. Ltd. and BestTop Education Technology Limited (Hong Kong Employment Agency Licence No. 64235) may collect, use and disclose your personal data, as provided in this registration form. In accordance to the <strong> Personal Data Protection Act 2012 (2020 REVISED EDITION)</strong>.
+        You must agree before an account can be created.
+      </p>
+      <label class="checkline" style="display:block; margin-bottom: 8px;">
+        <input type="checkbox" id="legalYesCheck" /> I, the User am in agreement with this Statement.
+      </label>
+      <label class="checkline" style="display:block;">
+        <input type="checkbox" id="legalNoCheck" /> I, the User am not in agreement with this Statement and would like to return back. 
+      </label>
+    </div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="assets/app.js"></script>
+<script>
+(async function () {
+  const App = window.JobSpyApp;
+  App.renderNav(null);
+
+  const params = new URLSearchParams(location.search);
+  const redirectTarget = params.get("redirect") || "index.html";
+
+  const pageTitle = document.getElementById("pageTitle");
+  const signedInCard = document.getElementById("signedInCard");
+  const signedInName = document.getElementById("signedInName");
+  const redirectHint = document.getElementById("redirectHint");
+  const continueLink = document.getElementById("continueLink");
+  const signOutBtn = document.getElementById("signOutBtn");
+  const authCard = document.getElementById("authCard");
+
+  const user = await App.getUser();
+  if (user) {
+    pageTitle.textContent = "You're signed in";
+    signedInName.textContent = user.username;
+    continueLink.href = redirectTarget;
+    redirectHint.textContent = params.get("redirect")
+      ? "Continue back to where you left off, or sign out below."
+      : "";
+    signedInCard.style.display = "block";
+    signOutBtn.addEventListener("click", () => App.logout());
+    return;
+  }
+
+  authCard.style.display = "block";
+
+  let mode = "signin"; // "signin" | "signup" | "reset"
+  const title = pageTitle;
+  const usernameEl = document.getElementById("authUsername");
+  const emailField = document.getElementById("authEmailField");
+  const emailEl = document.getElementById("authEmail");
+  const passwordField = document.getElementById("authPasswordField");
+  const passwordEl = document.getElementById("authPassword");
+  const passwordRulesEl = document.getElementById("authPasswordRules");
+  const forgotWrap = document.getElementById("authForgotWrap");
+  const forgotBtn = document.getElementById("authForgotBtn");
+  const infoEl = document.getElementById("authInfo");
+  const errorEl = document.getElementById("authError");
+  const submitBtn = document.getElementById("authSubmitBtn");
+  const toggleBtn = document.getElementById("authToggleBtn");
+  const legalModalBackdrop = document.getElementById("legalModalBackdrop");
+  const legalYesCheck = document.getElementById("legalYesCheck");
+  const legalNoCheck = document.getElementById("legalNoCheck");
+
+  // Shown once, right when switching into "Create account" mode — the user
+  // must pick Yes or No before doing anything else on the page. Yes closes
+  // the modal and lets the signup form (already rendered behind it) be
+  // used; No leaves the account uncreated and sends them back to Search.
+  function showLegalDisclaimer() {
+    legalYesCheck.checked = false;
+    legalNoCheck.checked = false;
+    legalModalBackdrop.style.display = "flex";
+  }
+
+  function hideLegalDisclaimer() {
+    legalModalBackdrop.style.display = "none";
+  }
+
+  legalYesCheck.addEventListener("change", () => {
+    if (legalYesCheck.checked) {
+      legalNoCheck.checked = false;
+      hideLegalDisclaimer();
+    }
+  });
+
+  legalNoCheck.addEventListener("change", () => {
+    if (legalNoCheck.checked) {
+      legalYesCheck.checked = false;
+      location.href = "index.html";
+    }
+  });
+
+  // Only sign-up sets a brand-new password (sign-in checks an existing one,
+  // which may predate these rules — see app.js's validatePassword), so the
+  // checklist and "new-password" autocomplete hint only apply in that mode.
+  function renderPasswordRules() {
+    passwordRulesEl.innerHTML = App.checkPasswordRules(passwordEl.value)
+      .map((rule) => `<li class="${rule.met ? "met" : ""}">${App.escapeHtml(rule.label)}</li>`)
+      .join("");
+  }
+
+  passwordEl.addEventListener("input", () => {
+    if (mode === "signup") renderPasswordRules();
+  });
+
+  function applyMode() {
+    title.textContent = { signin: "Sign in", signup: "Create account", reset: "Reset password" }[mode];
+    submitBtn.textContent = { signin: "Sign in", signup: "Create account", reset: "Send reset link" }[mode];
+    toggleBtn.textContent = mode === "signup" ? "Have an account? Sign in" : "Need an account? Sign up";
+    toggleBtn.style.display = mode === "reset" ? "none" : "block";
+    emailField.style.display = mode === "signup" ? "block" : "none";
+    passwordField.style.display = mode === "reset" ? "none" : "block";
+    passwordEl.autocomplete = mode === "signup" ? "new-password" : "current-password";
+    passwordRulesEl.style.display = mode === "signup" ? "block" : "none";
+    if (mode === "signup") renderPasswordRules();
+    forgotWrap.style.display = mode === "signin" ? "block" : "none";
+    errorEl.style.display = "none";
+    infoEl.style.display = "none";
+  }
+
+  toggleBtn.addEventListener("click", () => {
+    const enteringSignup = mode !== "signup";
+    mode = mode === "signup" ? "signin" : "signup";
+    applyMode();
+    if (enteringSignup) showLegalDisclaimer();
+  });
+
+  forgotBtn.addEventListener("click", () => {
+    mode = "reset";
+    applyMode();
+  });
+
+  submitBtn.addEventListener("click", async () => {
+    errorEl.style.display = "none";
+    infoEl.style.display = "none";
+    if (mode === "signup" && !legalYesCheck.checked) {
+      showLegalDisclaimer();
+      return;
+    }
+    submitBtn.disabled = true;
+    try {
+      if (mode === "signin") {
+        await App.signIn(usernameEl.value, passwordEl.value);
+        location.href = redirectTarget;
+      } else if (mode === "signup") {
+        const { needsConfirmation } = await App.signUp(usernameEl.value, emailEl.value, passwordEl.value);
+        if (needsConfirmation) {
+          const confirmMessage = `Account created! Check ${emailEl.value.trim()} for a confirmation link, then sign in.`;
+          mode = "signin";
+          applyMode(); // resets infoEl.style.display, so set the message after
+          infoEl.textContent = confirmMessage;
+          infoEl.style.display = "block";
+          submitBtn.disabled = false;
+        } else {
+          location.href = redirectTarget;
+        }
+      } else {
+        await App.requestPasswordReset(usernameEl.value);
+        const resetMessage = "If that username has a confirmed account, a password reset link has been emailed to it.";
+        mode = "signin";
+        applyMode();
+        infoEl.textContent = resetMessage;
+        infoEl.style.display = "block";
+        submitBtn.disabled = false;
+      }
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.style.display = "block";
+      submitBtn.disabled = false;
+    }
+  });
+
+  applyMode();
+  usernameEl.focus();
+})();
+</script>
+</body>
+</html>
