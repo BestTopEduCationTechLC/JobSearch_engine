@@ -1,0 +1,13 @@
+{
+  "sourceType": "github",
+  "source": "github",
+  "url": "https://github.com/alirezarezvani/claude-skills",
+  "repo": "alirezarezvani/claude-skills",
+  "ref": null,
+  "subpath": "engineering-team/skills/stripe-integration-expert",
+  "installSource": "alirezarezvani/claude-skills/engineering-team/skills/stripe-integration-expert",
+  "skillName": "stripe-integration-expert",
+  "scope": "global",
+  "installedAt": "2026-10-04T14:35:03.553Z",
+  "updatedAt": "2026-10-04T14:35:03.553Z"
+}

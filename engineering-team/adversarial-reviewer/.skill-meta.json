@@ -1,0 +1,13 @@
+{
+  "sourceType": "github",
+  "source": "github",
+  "url": "https://github.com/alirezarezvani/claude-skills",
+  "repo": "alirezarezvani/claude-skills",
+  "ref": null,
+  "subpath": "engineering-team/skills/adversarial-reviewer",
+  "installSource": "alirezarezvani/claude-skills/engineering-team/skills/adversarial-reviewer",
+  "skillName": "adversarial-reviewer",
+  "scope": "global",
+  "installedAt": "2026-10-04T14:35:03.515Z",
+  "updatedAt": "2026-10-04T14:35:03.515Z"
+}
