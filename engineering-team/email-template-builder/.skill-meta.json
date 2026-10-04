@@ -1,0 +1,13 @@
+{
+  "sourceType": "github",
+  "source": "github",
+  "url": "https://github.com/alirezarezvani/claude-skills",
+  "repo": "alirezarezvani/claude-skills",
+  "ref": null,
+  "subpath": "engineering-team/skills/email-template-builder",
+  "installSource": "alirezarezvani/claude-skills/engineering-team/skills/email-template-builder",
+  "skillName": "email-template-builder",
+  "scope": "global",
+  "installedAt": "2026-10-04T14:35:03.523Z",
+  "updatedAt": "2026-10-04T14:35:03.523Z"
+}

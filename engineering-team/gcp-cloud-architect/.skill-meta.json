@@ -1,0 +1,13 @@
+{
+  "sourceType": "github",
+  "source": "github",
+  "url": "https://github.com/alirezarezvani/claude-skills",
+  "repo": "alirezarezvani/claude-skills",
+  "ref": null,
+  "subpath": "engineering-team/skills/gcp-cloud-architect",
+  "installSource": "alirezarezvani/claude-skills/engineering-team/skills/gcp-cloud-architect",
+  "skillName": "gcp-cloud-architect",
+  "scope": "global",
+  "installedAt": "2026-10-04T14:35:03.526Z",
+  "updatedAt": "2026-10-04T14:35:03.526Z"
+}
