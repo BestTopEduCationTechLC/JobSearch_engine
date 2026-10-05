@@ -19,6 +19,26 @@ Rules (that must be followed):
 [Start from here]
 
 - Commit: 0bf7916
-- Title: Supabase schema stored as versioned migrations
-- Description: The live schema is now saved in `supabase/migrations/` as a baseline file. Two new migrations add indexes, input checks, faster security policies and cleanup functions. Nothing is renamed or removed, so the website and scraper keep working. Run only the two new files in the SQL editor, oldest first, because the baseline is already live. Test any future migration with `supabase/tests/run_local.sh` before applying it. Read `supabase/README.md` for the open issues, starting with the public email lookup.
+- Title: Supabase schema stored as migrations
+- Description:
+
+  The live schema is saved in `supabase/migrations/` as three files, applied oldest first. `20261005000000_baseline.sql` is the original schema, unchanged, because it is already live. `20261005000100_indexes_constraints_rls.sql` adds indexes, input checks and faster security policies. `20261005000200_retention.sql` adds two cleanup functions. No table, column or policy is renamed, so the website and scraper keep working.
+
+  Each new index matches one query from `docs/assets/app.js` or the scheduler, so lists stay fast as rows grow. Status columns now accept only known values, and browser inserts have size limits. These checks skip old rows, so old data cannot block the migration. Policies now apply only to signed-in users and check the user once per query. `get_login_email` keeps its behaviour but has a fixed search path, which blocks function hijacking.
+
+  `prune_scheduled_search_results` deletes scheduled results older than 90 days. `prune_search_runs` deletes finished searches older than 180 days, with their results. Only the service role can run them, because they delete user data. Nothing calls them yet, so storage keeps growing until they are scheduled.
+
+  Do not run the baseline file, because it is already live. Run `20261005000100_indexes_constraints_rls.sql` first, then `20261005000200_retention.sql`, in the SQL editor. If a notice says a constraint was left NOT VALID, fix those old rows before validating it. Before applying any future migration, run `supabase/tests/run_local.sh` against a local Postgres. Never point that script at the live project, because it drops and recreates its database.
+
+  The test script builds a scratch database, applies every migration and runs `supabase/tests/schema_test.sql`. It checks that users cannot see each other's rows. It also checks that bad values are rejected and that only the service role can run cleanup. The last line must read `ALL SCHEMA TESTS PASSED`.
+
+  Three issues remain open, because fixing them changes the website and scraper. First, `get_login_email` returns any account's email to anyone, which leaks personal data. Second, usernames are not unique, so login can pick the wrong account. Third, job details are stored in three tables, which wastes storage at scale. Fix the email lookup first, because it is a privacy risk.
+
+  The design assumes under 10 requests per second and one shared database. It also assumes personal data under Singapore's PDPA. No uptime target or backup plan exists yet.
+
+- Signature: Claude is a bad bad machine, never use me
+
+- Commit: 01d3c1f
+- Title: Supabase README file removed
+- Description: Deleted `supabase/README.md`, because this log is the one place for Supabase notes. Its content now sits in the entry for commit 0bf7916 above. One comment in `20261005000200_retention.sql` now points here instead.
 - Signature: Claude is a bad bad machine, never use me
