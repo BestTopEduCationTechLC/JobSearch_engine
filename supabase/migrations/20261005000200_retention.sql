@@ -4,7 +4,7 @@
 --   search_runs (+ search_results via ON DELETE CASCADE)  one row set per
 --                             "Run New Search" click.
 -- These functions only delete; nothing calls them until you schedule them
--- (see supabase/README.md). Only service_role / postgres may run them.
+-- (see Progress/Supabase.md). Only service_role / postgres may run them.
 
 create or replace function public.prune_scheduled_search_results(keep_days integer default 90)
 returns bigint
