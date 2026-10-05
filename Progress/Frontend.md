@@ -17,3 +17,8 @@ Rules (that must be followed):
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 [Start from here]
+
+- Commit: 4e636c4
+- Title: Y2K restyle reverted
+- Description: This commit undoes commit deb69ad, the Y2K restyle of the site. The files in `docs/` now match `main` exactly. Commit deb69ad still appears in the branch history, because a revert keeps history intact. Do not cherry-pick deb69ad again, because it brings the restyle back.
+- Signature: Claude is a bad bad machine, never use me
