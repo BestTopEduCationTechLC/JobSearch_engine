@@ -533,69 +533,7 @@
       </div>`;
     const btn = document.getElementById("navAuthBtn");
     if (btn) btn.addEventListener("click", () => (user ? logout() : goToLogin()));
-    renderRetroChrome(user);
     return user;
-  }
-
-  // ---------- Y2K page chrome ----------
-  // Purely decorative extras for the retro theme in style.css: the window
-  // title bar text, a marquee under the nav, and a footer with 88x31 badges
-  // and this browser's own visit counter. Safe to call more than once.
-  function renderRetroChrome(user) {
-    const wrap = document.querySelector(".wrap");
-    if (wrap) wrap.setAttribute("data-title", document.title);
-
-    const visits = bumpVisitCount();
-    const greeting = user
-      ? `Welcome back, ${escapeHtml(user.username)}! This is visit #${visits} from this computer.`
-      : "Welcome, surfer! Sign up to save jobs to your very own personal page.";
-
-    let marquee = document.getElementById("retroMarquee");
-    if (!marquee) {
-      marquee = document.createElement("div");
-      marquee.id = "retroMarquee";
-      marquee.className = "marquee";
-      marquee.setAttribute("role", "note");
-      document.getElementById("topnav").insertAdjacentElement("afterend", marquee);
-    }
-    marquee.innerHTML = `<span class="marquee-track">
-      <span class="blink" aria-hidden="true">&#9733;</span> ${greeting}
-      <span class="blink" aria-hidden="true">&#9733;</span> Fresh Singapore jobs from Indeed, LinkedIn &amp; Google
-      <span class="blink" aria-hidden="true">&#9733;</span> Try the search bar: "data analyst" AND (python OR sql)
-      <span class="blink" aria-hidden="true">&#9733;</span> Save the jobs you like and export them to PDF
-    </span>`;
-
-    if (!document.getElementById("retroFooter") && wrap) {
-      const footer = document.createElement("div");
-      footer.id = "retroFooter";
-      footer.className = "retro-footer";
-      footer.innerHTML = `
-        <div>Your visits to this site from this browser:</div>
-        <div class="counter" aria-label="${visits} visits">${String(visits).padStart(6, "0")}</div>
-        <div class="badges">
-          <a class="badge88 b1" href="https://github.com/speedyapply/JobSpy" target="_blank" rel="noopener">Powered by JobSpy</a>
-          <span class="badge88 b2">Hosted on GitHub Pages</span>
-          <span class="badge88 b3">Y2K compliant</span>
-          <a class="badge88 b4" href="contact.html">E-mail the webmaster</a>
-        </div>
-        <div class="bestview">Best viewed at 1024&times;768 or any size you like</div>`;
-      wrap.insertAdjacentElement("afterend", footer);
-    }
-  }
-
-  // Per-browser visit count, kept in localStorage; storage can be blocked
-  // (private mode etc.), in which case it just shows 1.
-  let visitCount = null;
-  function bumpVisitCount() {
-    if (visitCount !== null) return visitCount;
-    try {
-      const n = (parseInt(localStorage.getItem("besttop.visits"), 10) || 0) + 1;
-      localStorage.setItem("besttop.visits", String(n));
-      visitCount = n;
-    } catch (err) {
-      visitCount = 1;
-    }
-    return visitCount;
   }
 
   function goToLogin(redirectTo) {
