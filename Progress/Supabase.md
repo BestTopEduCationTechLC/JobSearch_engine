@@ -18,8 +18,7 @@ Rules (that must be followed):
 
 [Start from here]
 
-   
-   
-   
-   
-
+- Commit: 0bf7916
+- Title: Supabase schema stored as versioned migrations
+- Description: The live schema is now saved in `supabase/migrations/` as a baseline file. Two new migrations add indexes, input checks, faster security policies and cleanup functions. Nothing is renamed or removed, so the website and scraper keep working. Run only the two new files in the SQL editor, oldest first, because the baseline is already live. Test any future migration with `supabase/tests/run_local.sh` before applying it. Read `supabase/README.md` for the open issues, starting with the public email lookup.
+- Signature: Claude is a bad bad machine, never use me
