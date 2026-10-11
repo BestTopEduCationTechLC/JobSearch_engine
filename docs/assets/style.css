@@ -99,79 +99,78 @@ a:hover { color: var(--accent-hover); text-decoration: underline; }
   border-radius: var(--radius-sm);
 }
 
-/* Nav */
+/* Nav: early-2005 video-site look. White header, logo with a red rounded
+   box, small blue "Sign Up | Log In | Help" links top right, and a tab bar
+   underneath. Fixed light colors on purpose (like the scrape progress bar),
+   so it looks the same in dark mode. Markup comes from renderNav() in app.js. */
 .topnav {
   position: sticky;
   top: 0;
   z-index: 40;
-  background: color-mix(in srgb, var(--bg) 82%, transparent);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--border);
+  background: #fff;
+  border-bottom: 1px solid #99aabb;
   margin-bottom: 28px;
-  font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 13px;
+  color: #000;
 }
-.topnav .inner {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 14px 20px;
-  display: flex;
+.topnav .inner { max-width: 900px; margin: 0 auto; padding: 8px 20px 0; }
+.topnav .yt-top { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; padding-bottom: 8px; }
+.topnav .yt-logo {
+  display: inline-flex;
   align-items: center;
-  gap: 22px;
-  flex-wrap: wrap;
+  font: bold 30px/1 Arial, Helvetica, sans-serif;
+  letter-spacing: -1px;
+  color: #000;
+  text-decoration: none;
 }
-.topnav .brand {
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  margin-right: auto;
-  color: var(--text);
-  font-size: 1.05rem;
+.topnav .yt-logo:hover { text-decoration: none; color: #000; }
+.topnav .yt-logo-box {
+  margin-left: 3px;
+  padding: 2px 8px 3px;
+  background: #cc0000;
+  color: #fff;
+  border-radius: 8px;
+  font-size: 26px;
+  letter-spacing: -1px;
+}
+.topnav .yt-tagline { color: #666; font-size: 11px; font-style: italic; padding-bottom: 3px; margin-right: auto; }
+.topnav .yt-account { color: #666; padding-bottom: 3px; white-space: nowrap; }
+.topnav .yt-account a { color: #0033cc; text-decoration: underline; margin: 0 4px; }
+.topnav .yt-account a:first-child { margin-left: 0; }
+.topnav .yt-account a:hover { color: #cc0000; }
+.topnav .yt-account a.active { font-weight: bold; }
+.topnav .yt-account strong { color: #000; }
+.topnav .yt-tabs {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+  padding: 6px 6px 0;
+  background: linear-gradient(#e9f1fa, #cfe0f3);
+  border-top: 1px solid #b5c9de;
 }
 .topnav a.navlink {
-  color: var(--muted);
+  padding: 5px 16px 6px;
+  border: 1px solid #99aabb;
+  border-bottom: 0;
+  border-radius: 5px 5px 0 0;
+  background: linear-gradient(#f4f8fc, #dbe8f6);
+  color: #0033cc;
+  font-size: 14px;
+  font-weight: bold;
   text-decoration: none;
-  font-size: 0.88rem;
-  font-weight: 600;
-  padding: 6px 2px;
-  border-bottom: 2px solid transparent;
-  transition: color 0.15s ease, border-color 0.15s ease;
+  position: relative;
+  top: 1px;
 }
-.topnav a.navlink.active,
-.topnav a.navlink:hover { color: var(--text); border-bottom-color: var(--accent); }
-.topnav .whoami {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding-left: 14px;
-  border-left: 1px solid var(--border);
+.topnav a.navlink:hover { color: #cc0000; background: #fff; text-decoration: none; }
+.topnav a.navlink.active { background: #fff; color: #000; border-bottom: 1px solid #fff; }
+@media (max-width: 560px) {
+  .topnav .yt-logo { font-size: 24px; }
+  .topnav .yt-logo-box { font-size: 20px; }
+  .topnav .yt-tagline { display: none; }
+  .topnav .yt-account { width: 100%; }
+  .topnav a.navlink { padding: 5px 9px 6px; font-size: 12px; }
 }
-.topnav .whoami-name {
-  font-size: 0.85rem;
-  color: var(--muted);
-  font-weight: 500;
-  white-space: nowrap;
-}
-.topnav .whoami-name strong { color: var(--text); font-weight: 700; }
-.topnav .whoami button {
-  background: var(--card);
-  border: 1px solid var(--border-strong);
-  color: var(--text);
-  cursor: pointer;
-  font-size: 0.8rem;
-  font-weight: 700;
-  padding: 7px 16px;
-  border-radius: 999px;
-  white-space: nowrap;
-  transition: background 0.15s ease, border-color 0.15s ease, transform 0.08s ease;
-}
-.topnav .whoami button:hover { background: var(--bg-subtle); border-color: var(--muted); }
-.topnav .whoami button:active { transform: translateY(1px); }
-.topnav .whoami button.signin {
-  background: var(--accent);
-  color: var(--accent-text);
-  border-color: var(--accent);
-}
-.topnav .whoami button.signin:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
 
 /* Forms */
 input[type="text"], input[type="password"], input[type="number"], select {
