@@ -48,14 +48,22 @@ do $$ begin
 end $$;
 commit;
 
--- Anonymous: sees nothing, but can resolve a username to its login email.
+-- Anonymous: sees nothing.
 begin;
 set local role anon;
 do $$ begin
   assert (select count(*) from public.saved_jobs) = 0, 'anon must see no saved jobs';
   assert (select count(*) from public.search_runs) = 0, 'anon must see no runs';
-  assert public.get_login_email('ALICE') = 'alice@example.com', 'username lookup is case-insensitive';
-  assert public.get_login_email('nobody') is null, 'unknown username returns null';
+end $$;
+-- The username -> email lookup must be gone: it leaked emails to anyone.
+do $$ begin
+  assert not exists (select 1 from pg_proc where proname = 'get_login_email'),
+    'get_login_email must not exist (it leaked account emails)';
+  begin
+    perform public.get_login_email('alice');
+    raise exception 'anon could still call get_login_email';
+  exception when undefined_function then null;
+  end;
 end $$;
 commit;
 

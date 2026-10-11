@@ -33,5 +33,7 @@ left=$(psql -X -At -d $db -c "select
 [ "$left" = "0" ] || { echo "teardown left $left object(s) in schema public"; exit 1; }
 kept=$(psql -X -At -d $db -c "select count(*) from auth.users")
 [ "$kept" = "2" ] || { echo "teardown must not touch auth.users (found $kept rows, expected 2)"; exit 1; }
-psql -X -q -v ON_ERROR_STOP=1 -1 -d $db -f "$here"/../migrations/*.sql
+for f in "$here"/../migrations/*.sql; do
+  psql -X -q -v ON_ERROR_STOP=1 -1 -d $db -f "$f"
+done
 echo "TEARDOWN AND RE-APPLY PASSED"

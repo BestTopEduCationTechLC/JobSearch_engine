@@ -58,3 +58,17 @@ Rules (that must be followed):
   The email leak is still open. `get_login_email` gives any visitor the email for a username. Fix it before real users sign up, because emails are personal data. Usernames are also not unique yet, and job data is stored three times.
 
 - Signature: Claude is a bad bad machine, never use me
+
+- Commit: 1c820a0
+- Title: Email leak fixed
+- Description:
+
+  The function `get_login_email` gave any visitor an account's email from its username. Migration `20261011000000_remove_login_email_lookup.sql` drops it. The login page now signs in with email and password, so the function is not needed. The username is only a display name now. The local test fails if the function exists.
+
+  Run the new migration in the SQL Editor, or let the integration run it. Run only that file, because the initial file already ran. Then check that the function is gone with `select proname from pg_proc where proname = 'get_login_email';`. It must return no rows. Do not deploy the site change before this migration, or sign-in works but the leak stays open.
+
+  Keep "Confirm email" on in Authentication settings, because sign-in relies on confirmed emails. Add the site address and its `reset-password.html` page to the redirect list under Authentication, URL Configuration. Reset links fail without it.
+
+  Old accounts keep working. Users who signed in by username must now use the email they signed up with.
+
+- Signature: Claude is a bad bad machine, never use me
