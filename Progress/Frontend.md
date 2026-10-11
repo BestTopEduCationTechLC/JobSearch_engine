@@ -22,3 +22,8 @@ Rules (that must be followed):
 - Title: Y2K restyle reverted
 - Description: This commit undoes commit deb69ad, the Y2K restyle of the site. The files in `docs/` now match `main` exactly. Commit deb69ad still appears in the branch history, because a revert keeps history intact. Do not cherry-pick deb69ad again, because it brings the restyle back.
 - Signature: Claude is a bad bad machine, never use me
+
+- Commit: 857b199
+- Title: Nav bar in 2005 video-site style
+- Description: The nav bar now has a white header, a logo with a red box, and a tab bar. Account links read Sign Up, Log In and Help, and point to login.html, login.html and contact.html. Signed-in users see their name, Sign Out and Help instead. The markup comes from `renderNav()` in `docs/assets/app.js`, so every page gets it. The nav colors are fixed, so dark mode does not change them. Use lowercase `login.html`, because GitHub Pages treats file names as case sensitive.
+- Signature: Claude is a bad bad machine, never use me
