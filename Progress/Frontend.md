@@ -27,3 +27,8 @@ Rules (that must be followed):
 - Title: Nav bar in 2005 video-site style
 - Description: The nav bar now has a white header, a logo with a red box, and a tab bar. Account links read Sign Up, Log In and Help, and point to login.html, login.html and contact.html. Signed-in users see their name, Sign Out and Help instead. The markup comes from `renderNav()` in `docs/assets/app.js`, so every page gets it. The nav colors are fixed, so dark mode does not change them. Use lowercase `login.html`, because GitHub Pages treats file names as case sensitive.
 - Signature: Claude is a bad bad machine, never use me
+
+- Commit: ee914cd
+- Title: Logo box changed to light blue
+- Description: The box behind the word Careers is now light blue, not red. The text on it is dark navy, because white text is hard to read on light blue. Only the logo box changed. Link hover color stays red. The earlier entry above still says red box, so read this entry as the current state.
+- Signature: Claude is a bad bad machine, never use me
