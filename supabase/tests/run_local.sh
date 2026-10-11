@@ -23,3 +23,15 @@ for f in "$here"/../migrations/*.sql; do
 done
 
 psql -X -q -v ON_ERROR_STOP=1 -d $db -f "$here/schema_test.sql"
+
+# Teardown: must remove every app object (and nothing else), and the initial
+# migration must apply cleanly again afterwards.
+psql -X -q -v ON_ERROR_STOP=1 -d $db -f "$here/../teardown.sql"
+left=$(psql -X -At -d $db -c "select
+    (select count(*) from pg_tables where schemaname = 'public')
+  + (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public')")
+[ "$left" = "0" ] || { echo "teardown left $left object(s) in schema public"; exit 1; }
+kept=$(psql -X -At -d $db -c "select count(*) from auth.users")
+[ "$kept" = "2" ] || { echo "teardown must not touch auth.users (found $kept rows, expected 2)"; exit 1; }
+psql -X -q -v ON_ERROR_STOP=1 -1 -d $db -f "$here"/../migrations/*.sql
+echo "TEARDOWN AND RE-APPLY PASSED"

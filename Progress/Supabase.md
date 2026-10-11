@@ -42,3 +42,19 @@ Rules (that must be followed):
 - Title: Supabase README file removed
 - Description: Deleted `supabase/README.md`, because this log is the one place for Supabase notes. Its content now sits in the entry for commit 0bf7916 above. One comment in `20261005000200_retention.sql` now points here instead.
 - Signature: Claude is a bad bad machine, never use me
+
+- Commit: 4b2f473
+- Title: One initial migration, plus teardown
+- Description:
+
+  This commit replaces the three older migration files. The Supabase project is new and nothing was applied, so there is nothing to keep compatible. `supabase/migrations/20261010000000_initial_schema.sql` now creates every table in its final form. It includes indexes, input checks, security policies, the login lookup and two cleanup functions. The earlier entries above describe the old files, which no longer exist.
+
+  Run the initial file once, on an empty project, in the SQL editor. Add any later change as a new file, because editing an applied file leaves the project out of step. Do not run the initial file twice, because the tables already exist and it will fail.
+
+  `supabase/teardown.sql` deletes all five app tables and three functions. Run it only on a test project, because it destroys all saved jobs and search history. It does not touch accounts, so users stay in Authentication. Remove accounts there by hand if you need a full reset. Run the initial file again afterwards to rebuild.
+
+  `supabase/tests/run_local.sh` now tests four things on a local Postgres. It applies the initial file and checks that users cannot see each other's rows. It then runs teardown and checks that no app object remains. Last, it applies the initial file again to prove a rebuild works. Never point it at the live project, because it drops its own test database.
+
+  The email leak is still open. `get_login_email` gives any visitor the email for a username. Fix it before real users sign up, because emails are personal data. Usernames are also not unique yet, and job data is stored three times.
+
+- Signature: Claude is a bad bad machine, never use me
