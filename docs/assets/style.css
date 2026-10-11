@@ -99,7 +99,7 @@ a:hover { color: var(--accent-hover); text-decoration: underline; }
   border-radius: var(--radius-sm);
 }
 
-/* Nav: early-2005 video-site look. White header, logo with a red rounded
+/* Nav: early-2005 video-site look. White header, logo with a light blue rounded
    box, small blue "Sign Up | Log In | Help" links top right, and a tab bar
    underneath. Fixed light colors on purpose (like the scrape progress bar),
    so it looks the same in dark mode. Markup comes from renderNav() in app.js. */
@@ -128,8 +128,8 @@ a:hover { color: var(--accent-hover); text-decoration: underline; }
 .topnav .yt-logo-box {
   margin-left: 3px;
   padding: 2px 8px 3px;
-  background: #cc0000;
-  color: #fff;
+  background: #a9d4f5;
+  color: #0b2e59;
   border-radius: 8px;
   font-size: 26px;
   letter-spacing: -1px;
