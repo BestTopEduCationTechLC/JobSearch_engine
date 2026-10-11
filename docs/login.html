@@ -25,11 +25,11 @@
     </div>
 
     <div id="authCard" class="card" style="display:none;">
-      <div class="field" style="margin-bottom: 14px;">
-        <label for="authUsername">Username</label>
-        <input type="text" id="authUsername" autocomplete="username" />
+      <div class="field" id="authUsernameField" style="display:none; margin-bottom: 14px;">
+        <label for="authUsername">Username (shown in the top bar)</label>
+        <input type="text" id="authUsername" autocomplete="nickname" />
       </div>
-      <div class="field" id="authEmailField" style="display:none; margin-bottom: 14px;">
+      <div class="field" id="authEmailField" style="margin-bottom: 14px;">
         <label for="authEmail">Email address</label>
         <input type="text" id="authEmail" autocomplete="email" placeholder="you@example.com" />
       </div>
@@ -101,6 +101,7 @@
 
   let mode = "signin"; // "signin" | "signup" | "reset"
   const title = pageTitle;
+  const usernameField = document.getElementById("authUsernameField");
   const usernameEl = document.getElementById("authUsername");
   const emailField = document.getElementById("authEmailField");
   const emailEl = document.getElementById("authEmail");
@@ -163,7 +164,7 @@
     submitBtn.textContent = { signin: "Sign in", signup: "Create account", reset: "Send reset link" }[mode];
     toggleBtn.textContent = mode === "signup" ? "Have an account? Sign in" : "Need an account? Sign up";
     toggleBtn.style.display = mode === "reset" ? "none" : "block";
-    emailField.style.display = mode === "signup" ? "block" : "none";
+    usernameField.style.display = mode === "signup" ? "block" : "none"; // only a display name now
     passwordField.style.display = mode === "reset" ? "none" : "block";
     passwordEl.autocomplete = mode === "signup" ? "new-password" : "current-password";
     passwordRulesEl.style.display = mode === "signup" ? "block" : "none";
@@ -195,7 +196,7 @@
     submitBtn.disabled = true;
     try {
       if (mode === "signin") {
-        await App.signIn(usernameEl.value, passwordEl.value);
+        await App.signIn(emailEl.value, passwordEl.value);
         location.href = redirectTarget;
       } else if (mode === "signup") {
         const { needsConfirmation } = await App.signUp(usernameEl.value, emailEl.value, passwordEl.value);
@@ -210,8 +211,8 @@
           location.href = redirectTarget;
         }
       } else {
-        await App.requestPasswordReset(usernameEl.value);
-        const resetMessage = "If that username has a confirmed account, a password reset link has been emailed to it.";
+        await App.requestPasswordReset(emailEl.value);
+        const resetMessage = "If that email has a confirmed account, a password reset link has been emailed to it.";
         mode = "signin";
         applyMode();
         infoEl.textContent = resetMessage;
@@ -226,7 +227,7 @@
   });
 
   applyMode();
-  usernameEl.focus();
+  emailEl.focus();
 })();
 </script>
 </body>

@@ -16,10 +16,9 @@
   // ---------- Auth (username + password; a real, confirmed email is required) ----------
   // Sign-up collects a real email address and Supabase sends a confirmation
   // link to it — the account cannot log in until that link is clicked
-  // (Supabase's standard "Confirm email" flow, left ON). The chosen username
-  // is stored in user_metadata.username and is what the user actually types
-  // to log in; get_login_email() resolves username -> current email so sign-in
-  // never has to guess or reconstruct an address.
+  // (Supabase's standard "Confirm email" flow, left ON). Users sign in with
+  // that email + password. The chosen username is only a display name, stored
+  // in user_metadata.username and shown in the top bar.
   const USERNAME_RE = /^[a-zA-Z0-9_.-]{3,32}$/;
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -113,26 +112,22 @@
     return { needsConfirmation: !data.session };
   }
 
-  async function signIn(username, password) {
-    const err = validateUsername(username) || validatePassword(password);
+  // Signs in with email + password. There is no username lookup: a public
+  // "username -> email" function would reveal any account's email address.
+  async function signIn(email, password) {
+    const trimmedEmail = String(email || "").trim();
+    if (!EMAIL_RE.test(trimmedEmail)) throw new Error("Enter the email address you signed up with.");
+    const err = validatePassword(password);
     if (err) throw new Error(err);
-    const { data: email, error: lookupError } = await supabase.rpc("get_login_email", {
-      p_username: normalizeUsername(username),
-    });
-    if (lookupError) {
-      // A real backend/config problem (e.g. the RPC isn't deployed or isn't
-      // granted to anon/authenticated) — surface it plainly instead of
-      // masking it behind "no account found", which would be misleading.
-      throw new Error(`Could not verify that username: ${lookupError.message}`);
-    }
-    if (!email) throw new Error("No account found for that username.");
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signInWithPassword({ email: trimmedEmail, password });
     if (error) {
       if (/confirm/i.test(error.message)) {
         throw new Error("Please confirm your email first — check the inbox you signed up with.");
       }
+      // Same message for an unknown email and a wrong password, so the form
+      // never reveals which emails have accounts.
       if (/invalid login credentials/i.test(error.message)) {
-        throw new Error("Incorrect password for that username.");
+        throw new Error("Incorrect email or password.");
       }
       throw new Error(error.message);
     }
@@ -144,22 +139,16 @@
   }
 
   // ---------- Forgot password ----------
-  // Resolves username -> current email (same RPC as sign-in) and asks
-  // Supabase to email a recovery link. That link lands on reset-password.html
-  // with a recovery token in the URL, which Supabase's client picks up
-  // automatically and turns into a temporary session (see reset-password.html)
-  // used only to call updatePassword() below.
-  async function requestPasswordReset(username) {
-    const err = validateUsername(username);
-    if (err) throw new Error(err);
-    // Deliberately doesn't distinguish "no such username" from "email sent" —
-    // revealing which usernames exist is exactly what a forgot-password form
-    // shouldn't do. Callers should always show one generic message.
-    const { data: email, error: lookupError } = await supabase.rpc("get_login_email", {
-      p_username: username.trim().toLowerCase(),
-    });
-    if (lookupError || !email) return;
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+  // Asks Supabase to email a recovery link to the address typed in. That link
+  // lands on reset-password.html with a recovery token in the URL, which
+  // Supabase's client picks up automatically and turns into a temporary
+  // session (see reset-password.html) used only to call updatePassword() below.
+  async function requestPasswordReset(email) {
+    const trimmedEmail = String(email || "").trim();
+    if (!EMAIL_RE.test(trimmedEmail)) throw new Error("Enter a valid email address.");
+    // Callers always show one generic message, so the form never reveals
+    // whether an account exists for that email.
+    const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
       redirectTo: location.origin + location.pathname.replace(/[^/]*$/, "reset-password.html"),
     });
     if (error) throw new Error(error.message);
@@ -174,8 +163,8 @@
 
   // ---------- Changing the account's email later ----------
   // Uses Supabase's own secure-email-change flow: it sends a confirmation
-  // link to the new address and only swaps it in once clicked, so login (via
-  // get_login_email above) keeps resolving to whichever email is current.
+  // link to the new address and only swaps it in once clicked; sign-in then
+  // uses the new address.
   async function getEmailStatus() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
