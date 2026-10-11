@@ -519,20 +519,28 @@
     const user = await getUser();
     const link = (href, label, key) =>
       `<a class="navlink${activePage === key ? " active" : ""}" href="${href}">${label}</a>`;
+    // Signed out: Sign Up | Log In | Help (Sign Up and Log In both open
+    // login.html, Help opens contact.html). Signed in: the user's name,
+    // Sign Out, Help.
+    const help = `<a href="contact.html"${activePage === "contact" ? ' class="active"' : ""}>Help</a>`;
+    const account = user
+      ? `Hello, <strong>${escapeHtml(user.username)}</strong> | <a href="#" id="navAuthBtn">Sign Out</a> | ${help}`
+      : `<a href="login.html">Sign Up</a> | <a href="login.html">Log In</a> | ${help}`;
     container.innerHTML = `
       <div class="inner">
-        <span class="brand">Besttop Career Intelligence</span>
-        ${link("index.html", "Search", "index")}
-        ${link("personal.html", "My Saved Jobs", "personal")}
-        ${link("scheduled.html", "Scheduled Searches", "scheduled")}
-        ${link("contact.html", "Contact", "contact")}
-        <span class="whoami">
-          ${user ? `<span class="whoami-name">Hi, <strong>${escapeHtml(user.username)}</strong></span>` : ""}
-          <button type="button" id="navAuthBtn" class="${user ? "" : "signin"}">${user ? "Sign out" : "Sign Up/Sign In"}</button>
-        </span>
+        <div class="yt-top">
+          <a class="yt-logo" href="index.html" aria-label="Besttop Career Intelligence home">Besttop<span class="yt-logo-box">Careers</span></a>
+          <span class="yt-tagline">Career Intelligence</span>
+          <span class="yt-account">${account}</span>
+        </div>
+        <div class="yt-tabs">
+          ${link("index.html", "Search", "index")}
+          ${link("personal.html", "My Saved Jobs", "personal")}
+          ${link("scheduled.html", "Scheduled Searches", "scheduled")}
+        </div>
       </div>`;
     const btn = document.getElementById("navAuthBtn");
-    if (btn) btn.addEventListener("click", () => (user ? logout() : goToLogin()));
+    if (btn) btn.addEventListener("click", (e) => { e.preventDefault(); logout(); });
     return user;
   }
 
