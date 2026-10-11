@@ -32,3 +32,8 @@ Rules (that must be followed):
 - Title: Logo box changed to light blue
 - Description: The box behind the word Careers is now light blue, not red. The text on it is dark navy, because white text is hard to read on light blue. Only the logo box changed. Link hover color stays red. The earlier entry above still says red box, so read this entry as the current state.
 - Signature: Claude is a bad bad machine, never use me
+
+- Commit: 1c820a0
+- Title: Login page uses email
+- Description: The sign-in form now asks for email and password, not username. The forgot-password form asks for email. The username box shows only on the sign-up form, as a display name. Error text is the same for a wrong email and a wrong password, so the form leaks nothing. Deploy this change after the Supabase migration in `Progress/Supabase.md`.
+- Signature: Claude is a bad bad machine, never use me
