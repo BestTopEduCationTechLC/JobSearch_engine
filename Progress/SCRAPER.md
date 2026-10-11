@@ -5,7 +5,7 @@ Rules (that must be followed):
 2. Do not write multi-word nouns that have more than three words
 3. Do not write more than six sentences in each paragraph.
 4. Start safety instructions with a clear command or condition
-5. All must be related to the use of Supabase, or all applications related to database control
+5. All must be related to the use of Scraper, or all applications related to database control
 6. Give reason, without the use of extensive words.
 7. AI AGENT RULE: DO NOT INPUT SESSION LINK IN THIS DOCUMENT
 8. When entering details:
