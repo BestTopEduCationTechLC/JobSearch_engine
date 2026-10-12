@@ -1,0 +1,40 @@
+# Runs one user's one-off search. Started by the `trigger-scrape` Edge Function
+# (workflow_dispatch with a run_id). Needs repository secrets:
+#   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+name: Scrape (one-off search)
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "search_runs.id to process"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scrape-${{ inputs.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      RUN_ID: ${{ inputs.run_id }}   # passed through the environment, never pasted into a command
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install .
+      - name: Run search
+        run: python -m scraper.run_search "$RUN_ID"
+      - name: Mark the run failed if this job died early
+        if: failure() || cancelled()
+        run: python -m scraper.run_search --mark-failed "$RUN_ID"

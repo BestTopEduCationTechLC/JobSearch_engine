@@ -325,7 +325,16 @@
   // server-side, so signed-in users never need a token of their own.
   async function dispatchScrape(inputs, runId) {
     const { data, error } = await supabase.functions.invoke("trigger-scrape", { body: { inputs, run_id: runId } });
-    if (error) throw new Error(error.message || "Failed to trigger scrape");
+    if (error) {
+      // For a refused request supabase-js only says "non-2xx status"; the
+      // function's own message ("Too many searches...") is in the response body.
+      let message = error.message || "Failed to trigger scrape";
+      try {
+        const body = await error.context.json();
+        if (body && body.error) message = body.error;
+      } catch (_) { /* keep the generic message */ }
+      throw new Error(message);
+    }
     if (data && data.error) throw new Error(data.error);
   }
 
