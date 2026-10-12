@@ -37,3 +37,19 @@ Rules (that must be followed):
 - Title: Login page uses email
 - Description: The sign-in form now asks for email and password, not username. The forgot-password form asks for email. The username box shows only on the sign-up form, as a display name. Error text is the same for a wrong email and a wrong password, so the form leaks nothing. Deploy this change after the Supabase migration in `Progress/Supabase.md`.
 - Signature: Claude is a bad bad machine, never use me
+
+- Commit: 5dc57de
+- Title: Faster page load, safer script failures
+- Description:
+
+  The job list now starts downloading when the page is parsed. Before, it waited for the Supabase script, the PDF library and the sign-in check. In a local test with a slow network, the first job appeared at 1.9 s, not 2.9 s. With a fast network it appeared at 1.0 s, not 1.7 s.
+
+  The PDF library now loads on the first export, not on every page. If the Supabase script is blocked, the job list still shows, in 0.9 s. Before, the page stayed on "Loading job data" forever. Sign-in and saving show a clear error until the script loads.
+
+  Search waits 150 ms after typing before it filters. Job cards off screen skip layout work. The job file now uses normal browser caching, not no-store.
+
+  Do not edit `docs/data/jobs.json` by hand, because the scraper writes it. The file is 515 KB, and about 80 percent of it is job descriptions that the list does not show. Splitting descriptions into a second file would cut the first download a lot. That needs a scraper change, so it is not done here.
+
+  These numbers come from a local browser test with a faked network. They were not measured on the live site.
+
+- Signature: Claude is a bad bad machine, never use me
