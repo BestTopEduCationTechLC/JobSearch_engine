@@ -11,7 +11,16 @@
   const SUPABASE_URL = "https://inniqenqdcmqqmvvlrzb.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_aS8f54NDRKx_0qEhEeGGfA_Ey9NSFse";
 
-  const supabase = global.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  // The Supabase script comes from a CDN. If it is blocked or fails to load,
+  // the page must still show the shared job list: only features that need an
+  // account fail, with a clear message, instead of the whole script throwing.
+  const supabase = global.supabase
+    ? global.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    : new Proxy({}, {
+        get() {
+          throw new Error("The sign-in service could not be loaded. Check your connection and refresh the page.");
+        },
+      });
 
   // ---------- Auth (username + password; a real, confirmed email is required) ----------
   // Sign-up collects a real email address and Supabase sends a confirmation
@@ -23,8 +32,12 @@
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   async function getUser() {
-    const { data: { session } } = await supabase.auth.getSession();
-    return session ? sessionToUser(session) : null;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      return session ? sessionToUser(session) : null;
+    } catch (err) {
+      return null; // treated as signed out when the service can't be reached
+    }
   }
 
   function sessionToUser(session) {
@@ -435,12 +448,28 @@
   }
 
   // ---------- PDF export ----------
-  // Uses jsPDF (loaded separately via <script> tag on the page). Exports the
-  // given jobs as a simple PDF, optionally including the full description.
-  function exportJobsToPdf(jobs, options) {
+  // Uses jsPDF, loaded on demand the first time someone exports, so pages that
+  // never export don't download it. Exports the given jobs as a simple PDF,
+  // optionally including the full description.
+  const JSPDF_URL = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+
+  function loadJsPdf() {
+    if (global.jspdf && global.jspdf.jsPDF) return Promise.resolve(global.jspdf.jsPDF);
+    return new Promise((resolve, reject) => {
+      const tag = document.createElement("script");
+      tag.src = JSPDF_URL;
+      tag.onload = () => (global.jspdf && global.jspdf.jsPDF ? resolve(global.jspdf.jsPDF) : reject(new Error("jsPDF missing")));
+      tag.onerror = () => reject(new Error("jsPDF failed to load"));
+      document.head.appendChild(tag);
+    });
+  }
+
+  async function exportJobsToPdf(jobs, options) {
     const includeDescription = !!(options && options.includeDescription);
-    const jsPDFCtor = global.jspdf && global.jspdf.jsPDF;
-    if (!jsPDFCtor) {
+    let jsPDFCtor;
+    try {
+      jsPDFCtor = await loadJsPdf();
+    } catch (err) {
       global.alert("PDF library failed to load. Check your connection and try again.");
       return;
     }

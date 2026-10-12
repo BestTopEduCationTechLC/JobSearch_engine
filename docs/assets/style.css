@@ -242,6 +242,8 @@ button:disabled, .btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: 
   transition: box-shadow 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
 }
 .job:hover { box-shadow: var(--shadow-md); border-color: var(--border-strong); transform: translateY(-1px); }
+/* Skip layout and paint for cards that are off screen (up to 300 per page). */
+.job { content-visibility: auto; contain-intrinsic-size: auto 110px; }
 .job input[type="checkbox"] { margin-top: 4px; accent-color: var(--highlight); width: 16px; height: 16px; flex-shrink: 0; }
 .job .body { flex: 1; min-width: 0; }
 .job h3 { margin: 0 0 5px; font-size: 1.05rem; font-weight: 700; letter-spacing: -0.01em; }

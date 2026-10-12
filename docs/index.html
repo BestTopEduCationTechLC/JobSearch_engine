@@ -4,6 +4,15 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Besttop Job Engine</title>
+<script>
+  // Start downloading the job list right away, in parallel with the scripts
+  // below, instead of after they and the sign-in check have finished.
+  window.__jobsReq = fetch("data/jobs.json").then(function (r) {
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return r.json();
+  });
+  window.__jobsReq.catch(function () {}); // handled where it is used
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Doppio+One&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
@@ -91,13 +100,14 @@
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="assets/app.js"></script>
 <script>
 (async function () {
   const App = window.JobSpyApp;
-  const currentUser = await App.renderNav("index");
-  if (!currentUser) document.getElementById("authHint").style.display = "block";
+  // Don't wait for the sign-in check before showing jobs.
+  App.renderNav("index")
+    .then((user) => { if (!user) document.getElementById("authHint").style.display = "block"; })
+    .catch(() => { document.getElementById("authHint").style.display = "block"; });
 
   // state.jobs is whatever's currently on screen — either the shared,
   // publicly-browsable dataset, or one user's own private search results.
@@ -189,7 +199,12 @@
     return state.jobs.filter((j) => state.selected.has(j.id));
   }
 
-  searchInput.addEventListener("input", render);
+  // Re-filtering searches every description, so wait for a pause in typing.
+  let searchTimer;
+  searchInput.addEventListener("input", () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(render, 150);
+  });
 
   selectAll.addEventListener("change", () => {
     if (selectAll.checked) visibleJobs.forEach((j) => state.selected.add(j.id));
@@ -290,8 +305,7 @@
     }
   });
 
-  fetch("data/jobs.json", { cache: "no-store" })
-    .then((r) => r.json())
+  (window.__jobsReq || fetch("data/jobs.json").then((r) => r.json()))
     .then((data) => {
       state.sharedJobs = data.jobs || [];
       const generated = data.generated_at ? new Date(data.generated_at).toLocaleString() : "unknown";
