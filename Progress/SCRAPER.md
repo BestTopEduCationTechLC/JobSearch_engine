@@ -36,3 +36,17 @@ Rules (that must be followed):
 
 - Signature: Claude is a bad bad machine, never use me
 
+
+- Commit: 0d60145
+- Title: Scraper scripts added
+- Description:
+
+  The `scraper/` folder now holds the code that fills Supabase. `run_search.py` runs one user's search. `run_scheduled_searches.py` runs recurring searches that are due, and fails searches stuck over 30 minutes. `refresh_shared_jobs.py` rebuilds `docs/data/jobs.json`. Run any of them with `python -m scraper.<name>` from the repo root.
+
+  Each site runs alone, so one blocked site keeps the others. Indeed uses Singapore, not the USA default. Search settings from the browser are clamped, and unknown sites are dropped. Empty values become null, and dates become text, so the database accepts every row.
+
+  A one-off run starts only when its row is pending, so a repeat call does nothing. A schedule is claimed by moving its next run time in one update, so two runners cannot both take it. If every site fails, the run is marked failed with the reason. If some fail, the run completes and the error column names them. If the shared scrape finds nothing, the old `jobs.json` stays.
+
+  Run `python -m unittest discover -s scraper/tests -t .` before changing these files. It runs 21 tests on a fake database and needs no network. Live scraping was not tested, because this setup cannot reach the job sites. Treat site behavior as unknown until the first real run.
+
+- Signature: Claude is a bad bad machine, never use me
