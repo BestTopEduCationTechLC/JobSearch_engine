@@ -5,6 +5,13 @@
 (function (global) {
   "use strict";
 
+  // Add the optional corporate refresh stylesheet on every page that uses this
+  // shared application script. Keep the existing stylesheet as a fallback.
+  const corporateStyles = document.createElement("link");
+  corporateStyles.rel = "stylesheet";
+  corporateStyles.href = "assets/corporate.css";
+  document.head.appendChild(corporateStyles);
+
   // Fill these in from your Supabase project (Project Settings -> API).
   // The anon key is safe to expose in a public frontend — Row Level Security
   // on the saved_jobs table is what actually restricts access per user.
@@ -417,7 +424,7 @@
     for (let i = 0; i < tokens.length; i++) {
       const tok = tokens[i];
       const upper = String(tok).toUpperCase();
-      if (upper === "AND" || tok === "(" || tok === ")") continue; // implicit AND; drop grouping for the scraper term
+      if (upper === "AND" || tok === "(" || tok === ")") continue;
       if (upper === "NOT") {
         const nextTok = tokens[i + 1];
         if (nextTok && nextTok !== "(") {
@@ -426,9 +433,6 @@
         }
         continue;
       }
-      // Strip surrounding quotes: the literal " characters were passed straight
-      // into JobSpy's search_term, and most sites don't treat that as phrase
-      // syntax — it just made the term unrecognizable to the scraper.
       out.push(stripQuotes(tok));
     }
     return out.join(" ").trim();
@@ -508,15 +512,13 @@
     const user = await getUser();
     const link = (href, label, key) =>
       `<a class="navlink${activePage === key ? " active" : ""}" href="${href}">${label}</a>`;
-    // Signed out: Sign Up | Log In | Help (Sign Up and Log In both open
-    // login.html, Help opens contact.html). Signed in: the user's name,
-    // Sign Out, Help.
     const help = `<a href="contact.html"${activePage === "contact" ? ' class="active"' : ""}>Help</a>`;
     const account = user
       ? `Hello, <strong>${escapeHtml(user.username)}</strong> | <a href="#" id="navAuthBtn">Sign Out</a> | ${help}`
       : `<a href="login.html">Sign Up</a> | <a href="login.html">Log In</a> | ${help}`;
     container.innerHTML = `
       <div class="inner">
+        <div class="visitor-counter" aria-label="Website visitor count">Visitors: <strong id="visitorCount">Loading…</strong></div>
         <div class="yt-top">
           <a class="yt-logo" href="index.html" aria-label="Besttop Career Intelligence home">Besttop<span class="yt-logo-box">Careers</span></a>
           <span class="yt-tagline">Career Intelligence</span>
@@ -528,8 +530,23 @@
           ${link("scheduled.html", "Scheduled Searches", "scheduled")}
         </div>
       </div>`;
-    const btn = document.getElementById("navAuthBtn");
-    if (btn) btn.addEventListener("click", (e) => { e.preventDefault(); logout(); });
+    const authBtn = document.getElementById("navAuthBtn");
+    if (authBtn) authBtn.addEventListener("click", (e) => { e.preventDefault(); logout(); });
+
+    // Aggregate page views through CounterAPI. The counter is public and does
+    // not receive account or search data; if unavailable, show a clear fallback.
+    const visitorCount = document.getElementById("visitorCount");
+    fetch("https://api.counterapi.dev/v1/besttop-jobsearch-engine/visitors/up")
+      .then((response) => {
+        if (!response.ok) throw new Error("Visitor counter unavailable");
+        return response.json();
+      })
+      .then((data) => {
+        if (visitorCount) visitorCount.textContent = Number(data.count).toLocaleString();
+      })
+      .catch(() => {
+        if (visitorCount) visitorCount.textContent = "—";
+      });
     return user;
   }
 
